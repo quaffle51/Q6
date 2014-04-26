@@ -23,9 +23,11 @@ term();
 
 export DEPTH;
 export LINES:=14;
-export WIDTH:=42;
+export WIDTH:=46;
 export Q6()
 begin
+	print();
+	L0:={};
     local title:="Phase II simplex method";
     local m:=3; //the number of constraints
     local n:=3; //the number of variables
@@ -106,7 +108,6 @@ begin
       x_N:=ans(3);
       x_B:=ans(4);
       
-      print();
         DEPTH:=1;
         print_canonical_form(c_N,c_B,N,B,b,x_N,x_B);
         term("---------------------------------------");
@@ -174,6 +175,7 @@ begin
 
       changes_in_c(N,B,m,n,dT,c_N,c_B, basis_list,X_N,X_B);
       changes_in_b(x,B,m,n,x_N,x_B,old_x_B,basis_list,X_N,X_B);
+      editlist(L0);
     end; 
 end;
 
@@ -287,7 +289,7 @@ end;
 print_wT(c_B,B)
 begin
    local wT,str,i;
-   wT:=round(transpose(c_B)*inv(B),2);
+   wT:=round(transpose(c_B)*inv(B),4);
    str:="w™=c_B™B=[";
    for i from 1 to colDim(wT)-1 do
       str:=str +wT(1,i)+ ",";
@@ -300,7 +302,7 @@ end;
 print_dT(wT,N,c_N)
 begin
    local dT,str,i;
-   dT:=round(wT*N-transpose(c_N),2);
+   dT:=round(wT*N-transpose(c_N),4);
    str:="d™=w™N-c_N™=[";
    for i from 1 to colDim(dT)-1 do
       str:=str +dT(1,i)+ ",";
@@ -340,11 +342,11 @@ begin
    term(str);
    str:="";
    for i from 1 to rowDim(old_x_B)-1 do
-      str:=str +"θ_" +i+ "=" +old_x_B(i,1)+ "/" +y(i,1)+ "=" +round(θ(i),2)+ ", "; 
+      str:=str +"θ_" +i+ "=" +old_x_B(i,1)+ "/" +y(i,1)+ "=" +round(θ(i),4)+ ", "; 
    end;
-   str:=str+ "θ_" +rowDim(old_x_B)+ "=" +old_x_B(rowDim(old_x_B),1)+ "/" +y(rowDim(old_x_B),1)+ "=" +round(θ(rowDim(old_x_B)),2)+ ".";
+   str:=str+ "θ_" +rowDim(old_x_B)+ "=" +old_x_B(rowDim(old_x_B),1)+ "/" +y(rowDim(old_x_B),1)+ "=" +round(θ(rowDim(old_x_B)),4)+ ".";
    term(str);
-   str:="The smallest non-negative ratio is θ_" +index+  "=" +round(θ(index),2)+ ", so " +X_B(index)+ " becomes non-basic.";
+   str:="The smallest non-negative ratio is θ_" +index+  "=" +round(θ(index),4)+ ", so " +X_B(index)+ " becomes non-basic.";
    term(str);
    return index;
 end;
@@ -464,7 +466,7 @@ new_solution_is_found_by_solving(B,X_B,b)
 begin
    local i,j,spread:=-1,spread1:=-1,span,element,ρ;
    local gap:=size("B=");
-   local ans:=round(inv(B)*b,2);
+   local ans:=round(inv(B)*b,4);
    
    term("New solution is found by solving Bx_B=b.");
 
@@ -567,6 +569,8 @@ begin
     local maxes;
     local mins;
     local max_min:=makemat(0,m,3);
+    local max_min_lists;
+    local max_min_list;
 
     for j from 1 to rowDim(c_N) do
       c:=addRow(c,row(c_N,j),rowDim(c)+1);
@@ -589,6 +593,8 @@ begin
          end;
         end;
     end;
+    
+     max_min_lists:={};
 
     for j from 1 to m do
         maxes:={};
@@ -600,23 +606,41 @@ begin
             end;
         end;
         max_min(j,1):=max(maxes);
-        max_min(j,2):=c(j,1);
+        max_min(j,4):=c(j,1);
         max_min(j,3):=min(mins);
+        max_min_lists(0):=round({maxes,mins},4);
     end;
     
     for j from 1 to m do
-        str:="Since " +x(j)+ " is basic at the solution, we compute e_" +basis_list(j)+ "™BN=" +round(ρ(j),2)+ ", ";
+        str:="Since " +x(j)+ " is basic at the solution, we compute e_" +basis_list(j)+ "™BN=" +round(ρ(j),4)+ ", ";
         term(str);
         str:="so ";
         for k from 1 to n do
-        	str:=str + "ρ_" +basis_list(j)+ "_" +right(X_N(k),1)+ "=" +round(ρ(j,k),2)+ ", ";
+        	str:=str + "ρ_" +basis_list(j)+ "_" +right(X_N(k),1)+ "=" +round(ρ(j,k),4)+ ", ";
         end;
         str:=str + "and the ratios θ_" +basis_list(j)+ "_k=-d_k/ρ_" +basis_list(j)+ "_k are ";
-        for k from 1 to n do
-        	str:=str +round(θ(j,k),2)+ "/" +round(ρ(j,k),2)+ "=" +round(θ(j,k)/ρ(j,k),2) + ", ";
-        end;
-        //division by zero in the above to fix.
-        term(str);
+		term(str);
+		for k from 1 to n do
+	        if NOT(ρ(j,k)==0) then
+	            str:=round(-d(k,1),4)+ "/" +round(ρ(j,k),4)+ "=" +round(-d(k,1)/ρ(j,k),4);
+	        else
+	        	str:=round(-d(k,1),4)+ "/" +round(ρ(j,k),4)+ "=" +(-CAS("1/0"));
+	        end;
+	        term(str);
+	    end;
+	    max_min_list:=max_min_lists(j);
+		maxes:=round(max_min_list(1),4);
+		mins :=round(max_min_list(2),4);
+        str:="Hence θ_" +basis_list(j)+ "_max=max" +string(maxes)+ "=" +round(max_min(j,1),4)+ " and ";
+       	term(str);
+       	str:="θ_" +basis_list(j)+ "_min=min" +string(mins)+ "=" +round(max_min(j,3),4)+ ".";
+       	term(str);
+       	str:="So the range of values for c_" +basis_list(j)+ " for which the";
+       	term(str);
+       	term("basis list remains unchanged is");
+       	term(str);
+       	str:=round(max_min(j,4)+max_min(j,1),4)+ "=" +round(max_min(j,4),4)+ " " +round(max_min(j,1),4)+ " ≤ c_" +basis_list(j)+ "+δc_" +basis_list(j)+ "≤" +round(max_min(j,4),4)+ "+" +round(max_min(j,3),4)+ " = " + round(max_min(j,4) + max_min(j,3),4)+ ".";
+       	term(str);
         term("");
     end;
 end;
@@ -635,39 +659,39 @@ begin
         slack_variable_list(0):=n+i;
     end;
     X_N_index:={};
-    print("m=" +m);
+
     for i from 1 to size(X_N) do
         X_N_index(0):=expr(right(X_N(i),1))-m;
     end;
-    print(X_N_index);
+
     term("Changes in b:");
     
     for i from 1 to size(slack_variable_list) do
         if member(slack_variable_list(i),basis_list) then
             case
                 if old_x_B(i,1)<0 then
-                    term("x_" +basis_list(i)+ "=" +round(old_x_B(i,1),2)+ " has slack in it. A change of δb_" +basis_list(i)+ "=" +x_B(i,1)+ " will not change the solution provided");
+                    term("x_" +basis_list(i)+ "=" +round(old_x_B(i,1),4)+ " has slack in it. A change of δb_" +basis_list(i)+ "=" +x_B(i,1)+ " will not change the solution provided");
                     term("-∞ > b_" 
                             +i+
                              " + δb_" 
                             +x_B(i,1)+ 
                              " ≤ " 
-                            +round(x_B(i,1)-old_x_B(i,1),2)+ 
+                            +round(x_B(i,1)-old_x_B(i,1),4)+ 
                               "."
                         );
                 end;
                 if old_x_B(i,1)>0 then
-                    term("x_" +basis_list(i)+ "=" +round(old_x_B(i,1),2)+ " has surplus in it. A change of δb_" +basis_list(i)+ "=" +x_B(i,1)+ " will not change the solution provided");
-                    term(round(x_B(i,1)-old_x_B(i,1),2)+ "=" +x_B(i,1)+ 
+                    term("x_" +basis_list(i)+ "=" +round(old_x_B(i,1),4)+ " has surplus in it. A change of δb_" +basis_list(i)+ "=" +x_B(i,1)+ " will not change the solution provided");
+                    term(round(x_B(i,1)-old_x_B(i,1),4)+ "=" +x_B(i,1)+ 
                               "-" 
-                             +round(old_x_B(i,1),2)+
+                             +round(old_x_B(i,1),4)+
                               "≤ " 
                               +x_B(i,1)+ 
                                " + δb_" 
                               +i+ 
                                " < ∞."
                         );
-                    term("Thus δb_" +i+ ">" +round(old_x_B(i,1),2)+ " for a change in the solution.");
+                    term("Thus δb_" +i+ ">" +round(old_x_B(i,1),4)+ " for a change in the solution.");
                     term("");
                 end;
                 default term("This shouldn't be printed.");
@@ -725,22 +749,10 @@ end;
 
 term(str)
 begin
-    if (DEPTH mod LINES)==0 and str=="" then return; end;
-    
     while size(str)>WIDTH do
-        print(left(str,WIDTH)+"☞");
+        L0(0):=left(str,WIDTH)+"☞";
         str:=mid(str,WIDTH+1);
-        DEPTH:=DEPTH + 1;
-        if (DEPTH mod LINES)==0 then
-            wait;
-            print();
-        end;
     end;
-    print(str);
-    DEPTH:=DEPTH + 1;
-    if (DEPTH mod LINES)==0 then
-        wait;
-        print();
-    end;
+    L0(0):=str;
 end;
 
