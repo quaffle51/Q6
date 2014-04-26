@@ -1,0 +1,746 @@
+make_xN_xB();
+validate_List();
+create_A_matrix();
+ratio_test();
+calc_θ();
+get_smallest_non_negative_ratio();
+update_basis_list();
+swap_columns();
+new_solution_is_found_by_solving();
+changes_in_c();
+changes_in_b();
+print_basis_list();
+print_matrix();
+print_vector();
+print_Vector();
+print_all_slack_point();
+print_wT();
+print_dT();
+print_most_negative_reduced_cost();
+print_x();
+print_canonical_form();
+term();
+
+export DEPTH;
+export LINES:=14;
+export WIDTH:=42;
+export Q6()
+begin
+    local title:="Phase II simplex method";
+    local m:=3; //the number of constraints
+    local n:=3; //the number of variables
+    local A,B,N,B_inv,c_N,c_B,b;
+    local basis_list,x_N,x_B,X_N,X_B,wT,dT;
+    local all_slack_point_x;
+    local ans,i,str,index,a_enters,y_enters,old_x_B,old_z;
+    local enters,leaves,becomes_basic,becomes_non_basic;
+    local iteration,x;
+    if validate_List(L6,{1,1,M1,M1,M1,M1,M1,L1}) then //m,n,N,B,b,c_N,c_B,basis_list
+        m:=         L6(1);
+        n:=         L6(2);
+        N:=         L6(3);
+        B:=         L6(4);
+        b:=         L6(5);
+        c_N:=       L6(6);
+        c_B:=       L6(7);
+        basis_list:=L6(8);
+    else
+        m:=3;
+        n:=3;
+        N:=[[1,2,4],[3,-1,2],[2,-3,1]];
+        B:=identity(m);
+        b:=[[12],[8],[9]];
+        c_N:=[[3],[-2],[1]];
+        c_B:=[[0],[0],[0]];
+        basis_list:=makelist(X+n,X,1,m,1);        
+    end;
+    
+    if input(
+        {m,n},
+         title,
+         {"m=","n="},
+         {
+            "Enter the number of constraints (m)",
+            "Enter the number of variables (n)"
+         },
+         {m,n}
+    ) then
+       if NOT(rowDim(N)==m) or NOT(colDim(N)==n) then
+          B:=identity(m);
+          N:=makemat(0,m,n);
+          b:=makemat(0,m,1);
+          c_N:=makemat(0,n,1);
+          c_B:=makemat(0,m,1);
+          basis_list:=makelist(X+n,X,1,m,1);  
+       end;
+       
+        msgbox("Enter basis list ...");
+        editlist(basis_list);
+        msgbox("Enter N matrix ...");
+        editmat(N);
+        msgbox("Enter B matrix ...");
+        editmat(B);
+        msgbox("Enter b ...");
+        editmat(b);
+        msgbox("Enter c_N ...");
+        editmat(c_N);
+        msgbox("Enter c_B ...");
+        editmat(c_B);
+        
+        //m,n,N,B,b,c_N,c_B,basis_list
+        L6:={};
+        L6(0):=m;
+        L6(0):=n;
+        L6(0):=N;
+        L6(0):=B;
+        L6(0):=b;
+        L6(0):=c_N;
+        L6(0):=c_B;
+        L6(0):=basis_list;
+
+        A:=create_A_matrix(N,B);
+
+      ans:=make_xN_xB(m,n,basis_list,b);
+      X_N:=ans(1);
+      X_B:=ans(2);
+      x_N:=ans(3);
+      x_B:=ans(4);
+      
+      print();
+        DEPTH:=1;
+        print_canonical_form(c_N,c_B,N,B,b,x_N,x_B);
+        term("---------------------------------------");
+        iteration:=0;
+      repeat
+         iteration:=iteration+1;
+         term("Iteration " +iteration+ "."); 
+         print_matrix("B=",B,"");
+         term("");
+         print_matrix("N=",N,".");
+         term("");
+         print_vector("x_N",X_N,x_N);
+         term("");
+         print_vector("x_B",X_B,x_B);
+         term("");
+         print_Vector("c_N=",TRN(c_N),"™.");
+         term("");
+         print_Vector("c_B=",TRN(c_B),"™.");
+         term("");
+         print_basis_list("Basis list is ", basis_list);
+           term("");
+         wT:=print_wT(c_B,B);
+         term("");
+         dT:=print_dT(wT,N,c_N);
+         term("");
+         
+         old_x_B:=inv(B)*b;
+         old_z  :=transpose(c_B)*old_x_B;
+         
+         enters:=print_most_negative_reduced_cost(dT,X_N);
+         if enters then
+            a_enters:=transpose(col(A,enters));
+            y_enters:=row(transpose(inv(B)*a_enters),1);
+            term("a_" +enters+ "=" +col(A,enters)+ "™, y_" +enters+ "=Ba_" +enters+ "=" +y_enters+ "™.");
+            term("");
+            leaves:=ratio_test(old_x_B,transpose(inv(B)*col(A,enters)),X_B);
+            ans:=update_basis_list(x_B,X_B,x_N,X_N,enters,leaves,basis_list);
+            x_B:=ans(1);
+            X_B:=ans(2);
+            x_N:=ans(3);
+            X_N:=ans(4);
+            basis_list:=ans(5);
+            term("");
+            print_basis_list("New basis list is ",basis_list);
+            ans:=swap_columns(N,B,enters,leaves);
+            N:=ans(1);
+            B:=ans(2);
+            A:=ans(3);
+   
+            old_x_B:=inv(B)*b;
+            
+            ans:=swap_columns(TRN(c_N),TRN(c_B),enters,leaves);
+            c_N:=TRN(ans(1));
+            c_B:=TRN(ans(2));
+            
+            new_solution_is_found_by_solving(B,X_B,b);
+         end;
+
+         old_z:=TRN(c_B)*old_x_B;
+         term("");
+         x:=print_x(n,old_x_B,basis_list);
+         term("z=" +old_z(1,1)+ ".");
+         term("---------------------------------------");
+      until NOT(enters) or iteration==10;
+
+      changes_in_c(N,B,m,n,dT,c_N,c_B, basis_list,X_N,X_B);
+      changes_in_b(x,B,m,n,x_N,x_B,old_x_B,basis_list,X_N,X_B);
+    end; 
+end;
+
+validate_List(L,lst_type)
+begin
+    local i, outcome:=1;
+    if NOT(length(L)==length(lst_type)) then return 0; end;
+    for i from 1 to length(L) do
+        outcome:=outcome and (type(L(i))==type(lst_type(i)));
+        if NOT(outcome) then return 0; end;
+    end;
+    return 1;
+end;
+
+create_A_matrix(N,B)
+begin
+   local i,A;
+   for i from 1 to colDim(B) do
+      A:=addCol(N,col(B,i),colDim(N)+1);
+   end;
+   return A;
+end;
+
+make_xN_xB(m,n,basis_list,b)
+begin
+
+    local xN:={};
+    local xB:={};
+    local i;
+    local x_N:=makemat(0,n,1);
+    local x_B:=makemat(0,m,1);
+    local zero:=row(makemat(0,1,1),1);
+
+    for i from 1 to (m+n) do
+       
+        if pos(basis_list,i) then
+            xB:=append(xB,"x_"+i);
+            x_B:=addRow(x_B,row(b,1),rowDim(x_B)+1);
+            b:=delRow(b,1);
+            x_B:=delRow(x_B,1);
+        else
+            xN:=append(xN,"x_"+i);
+            x_N:=addRow(x_N,zero,rowDim(x_N)+1);
+            x_N:=delRow(x_N,1);
+        end;
+    end;
+    
+    return {xN,xB,x_N,x_B};
+end;
+
+print_vector(name,V,v)
+begin
+   local i;
+   local str:=name +"=[";
+   local STR:="[";
+   for i from 1 to length(V)-1 do
+      str:=str +V(i)+   ",";
+      if length(v)>0 then
+         STR:=STR +v(i,1)+ ",";
+      end;
+   end;
+   str:=str +V(length(V)) +"]";
+   STR:=STR +v(length(v),1) +"]™.";
+   term(str +"="+ STR);
+end;
+
+print_Vector(name,v,postfix)
+begin
+   local i;
+   local str:=name +"[ ";
+
+   for i from 1 to colDim(v)-1 do
+      str:=str +v(1,i)+   ", ";
+   end;
+   str:=str +v(1,colDim(v)) +"]";
+
+   term(str +postfix);
+end;
+
+print_all_slack_point(x_N,x_B)
+begin
+   local i;
+   local msg1;
+   local msg2;
+   local str;
+   local feasible:=1; //assume the all-slack point is feasible
+   local asp:=makemat(0,1,1);
+   for i from 1 to length(x_N) do
+      asp:=addrow(asp,row(x_N,i),rowDim(asp)+1);
+   end;
+   for i from 1 to length(x_B) do
+      asp:=addrow(asp,row(x_B,i),rowDim(asp)+1);
+   end;
+   asp:=delRow(asp,1);
+   str:="[";
+   for i from 1 to length(asp)-1 do
+      feasible:=feasible and (asp(i,1)>=0);
+      str:=str +asp(i,1)+ ",";
+   end;
+   str:=str +asp(rowDim(asp),1)+ "]™";
+   feasible:=(feasible and (asp(rowDim(asp),1)>=0));
+   msg1:="The all-slack point x=" +str+ " is feasible since x≥0";
+   msg2:="The all-slack point x=" +str+ " is infeasible since x<0.";
+   case
+      if     feasible  then term(msg1); end;
+      if NOT(feasible) then term(msg2); end;
+      default term("This message shouldn't be printed.");
+   end;
+end;
+
+print_wT(c_B,B)
+begin
+   local wT,str,i;
+   wT:=round(transpose(c_B)*inv(B),2);
+   str:="w™=c_B™B=[";
+   for i from 1 to colDim(wT)-1 do
+      str:=str +wT(1,i)+ ",";
+   end;
+   str:=str +wT(1,colDim(wT))+ "].";
+   term(str);
+   return wT;
+end;
+
+print_dT(wT,N,c_N)
+begin
+   local dT,str,i;
+   dT:=round(wT*N-transpose(c_N),2);
+   str:="d™=w™N-c_N™=[";
+   for i from 1 to colDim(dT)-1 do
+      str:=str +dT(1,i)+ ",";
+   end;
+   str:=str +dT(1,colDim(dT))+ "].";
+   term(str);
+   return dT;
+end;
+
+print_most_negative_reduced_cost(dT,X_N)
+begin
+   local i,index:=0;
+   local mnrc:=0;
+   local str:="The most negative reduced cost is d_";
+   for i from 1 to colDim(dT) do
+      if dT(1,i) < mnrc then
+         mnrc:= dT(1,i);
+         index:=i;
+      end;
+   end;
+   if index then
+      str:=str +index+ "=" +mnrc+ ", corresponding to " +X_N(index)+ ", so " +X_N(index)+ " becomes basic.";
+      term(str);
+   else
+      term("The reduced costs are all positive, hence a solution has been found.");
+   end;
+   return index;
+end;
+
+ratio_test(old_x_B,y,X_B)
+begin
+   local θ:= calc_θ(old_x_B,y);
+   local index:=get_smallest_non_negative_ratio(θ);
+   local i,str;
+
+   str:="θ_k=old_x_B_k/(y_i)_k, ";
+   term(str);
+   str:="";
+   for i from 1 to rowDim(old_x_B)-1 do
+      str:=str +"θ_" +i+ "=" +old_x_B(i,1)+ "/" +y(i,1)+ "=" +round(θ(i),2)+ ", "; 
+   end;
+   str:=str+ "θ_" +rowDim(old_x_B)+ "=" +old_x_B(rowDim(old_x_B),1)+ "/" +y(rowDim(old_x_B),1)+ "=" +round(θ(rowDim(old_x_B)),2)+ ".";
+   term(str);
+   str:="The smallest non-negative ratio is θ_" +index+  "=" +round(θ(index),2)+ ", so " +X_B(index)+ " becomes non-basic.";
+   term(str);
+   return index;
+end;
+
+calc_θ(old_x_B,y)
+begin
+   local k;
+   local θ:={};
+   for k from 1 to length(y) do
+      if y[k,1]==0 then
+         θ[k] := CAS("1/0");
+      else
+         θ[k] := old_x_B[k,1]/y[k,1];
+      end;
+   end;
+   return θ;
+end;
+
+get_smallest_non_negative_ratio(θ)
+begin
+   local k;
+   local smallest;
+   local positives := {};
+
+   for k from 1 to length(θ) do
+      if θ[k] >= 0 then
+         positives := append(positives, θ[k]);
+      end;
+   end;
+   if length(positives) > 0 then
+      return member(min(positives),θ);
+   else
+      return -1;
+   end;
+end;
+
+update_basis_list(x_B,X_B,x_N,X_N,enters,leaves,basis_list)
+begin
+   
+   local temp,index,entering,leaving,becomes_basic,becomes_non_basic;
+   becomes_basic    :=right(X_N(enters),1);
+   becomes_non_basic:=right(X_B(leaves),1);
+   
+   temp:=x_B(leaves,1);
+   x_B(leaves,1):=x_N(enters,1);
+   x_N(enters,1):=temp;
+   
+   temp:=X_B(leaves);
+   X_B(leaves):=X_N(enters);
+   X_N(enters):=temp;
+
+   index            :=member(becomes_non_basic,basis_list);
+   basis_list(index):=approx(becomes_basic,10);
+   
+   return {x_B,X_B,x_N,X_N,basis_list};
+end;
+
+print_basis_list(title,basis_list)
+begin
+   local i,str:=title;
+   for i from 1 to length(basis_list) do
+        str:=str +"|" +basis_list(i);
+    end;
+    term(str+ "|.");
+end;
+
+print_matrix(title,m,post_title)
+begin
+   local i,j,line,spread:=-1,element,ρ;
+   local gap:=size(title);
+
+   for i from 1 to rowDim(m) do
+      for j from 1 to colDim(m) do
+         if size(string(m(i,j)))>spread then
+            spread:=size(string(m(i,j)));
+         end;
+      end;
+   end;
+   
+   term(title);
+
+   for i from 1 to rowDim(m) do
+      ρ:=" ["+" ";
+      for j from 1 to colDim(m)-1 do
+         element:=string(m(i,j));
+         while size(element)<spread do
+            element:=" " +element;
+         end;
+         ρ:=ρ +element+ ","+" ";
+      end;
+      element:=string(m(i,colDim(m)));
+      while size(element)<spread do
+         element:=" " +element;
+      end;
+      if i==1 then
+         ρ:=ρ +element+" "+ "]" + post_title;
+      else
+         ρ:=ρ +element+ " "+"]";
+      end;
+      term(ρ);
+   end;   
+end;
+
+swap_columns(N,B,enters,leaves)
+begin
+   local i,A:=N;
+   for i from 1 to colDim(B) do
+      A:=addCol(A,col(B,i),colDim(A)+1);
+   end;
+   swapcol(A,enters,leaves+colDim(N));
+   N:=sub(A,{1,1},{rowDim(N),colDim(N)});
+   B:=sub(A,{1,colDim(N)+1},{rowDim(N),colDim(N)+colDim(B)});
+   return {N,B,A};
+end;
+
+new_solution_is_found_by_solving(B,X_B,b)
+begin
+   local i,j,spread:=-1,spread1:=-1,span,element,ρ;
+   local gap:=size("B=");
+   local ans:=round(inv(B)*b,2);
+   
+   term("New solution is found by solving Bx_B=b.");
+
+   for i from 1 to rowDim(B) do
+      for j from 1 to colDim(B) do
+         if size(string(B(i,j)))>spread then
+            spread:=size(string(B(i,j)));
+         end;
+      end;
+   end;
+   
+   for i from 1 to rowDim(b) do
+      if size(string(b(i,1)))>spread1 then
+         spread1:=size(string(b(i,1)));
+      end;
+   end;
+   
+   for i from 1 to rowDim(B) do
+      ρ:=" ["+" ";
+      for j from 1 to colDim(B)-1 do
+         element:=string(B(i,j));
+         while size(element)<spread do
+            element:=" " +element;
+         end;
+         ρ:=ρ +element+ ","+" ";
+      end;
+      element:=string(B(i,colDim(B)));
+      while size(element)<spread do
+         element:=" " +element;
+      end;
+      
+      span:=string(b(i,1));
+      while size(span)<spread1 do
+         span:="  " +span;
+      end;
+      if i==1 then
+         ρ:=ρ +element+" "+ "][" +X_B(i)+ "]=[" +span+ "],    [" +X_B(i)+ "]=[" +ans(i,1) +"]";
+      else
+         ρ:=ρ +element+ " "+"][" +X_B(i)+ "]  [" +span+ "]     [" +X_B(i)+ "]  [" +ans(i,1) +"]";
+      end;
+      
+      term(ρ);
+   end;
+end;
+
+print_x(n,old_x_B,basis_list)
+begin
+   local i,ans;
+   local x:=makemat(0,size(basis_list)+n,1);
+   for i from 1 to size(basis_list) do
+      x(basis_list(i),1):=old_x_B(i,1);
+   end;
+   print_Vector("x=",TRN(round(x,-6)),"™.");
+   return x;
+end;
+
+print_canonical_form(c_N,c_B,N,B,b,x_N,x_B)
+begin
+   term("Canonical form:");
+   local i,str;
+   local A:=create_A_matrix(N,B);
+   term("maximise z=c™x");
+   term("subject to Ax=b, x≥0");
+   str:="where c=[ ";
+   for  i from 1 to rowDim(c_N) do
+      str:=str +c_N(i,1)+ ", ";
+   end;
+   for i from 1 to rowDim(c_B)-1 do
+      str:=str +c_B(i,1)+ ", ";
+   end;
+   str:=str +c_B(rowDim(c_B),1)+ " ]™.";
+   term(str);
+   str:="x=[ ";
+   for i from 1 to rowDim(c_N)+rowDim(c_B)-1 do
+      str:=str +"x_"+ i +", ";
+   end;
+   str:=str +"x_"+ (rowDim(c_N)+rowDim(c_B))+ " ]™.";
+   term(str);
+   print_matrix("A=",A,".");
+   print_all_slack_point(x_N,x_B);
+end;
+
+changes_in_c(N,B,m,n,dT,c_N,c_B,basis_list,X_N,X_B)
+begin
+    term("Changes in c:");
+    local I:=identity(m);
+    local inv_B:=inv(B);
+    local d:=TRN(dT);
+    local i,j,k;
+    local ρ:=makemat(0,m,n);
+    local θ:=makemat(0,m,n);
+    local upper_bound:=makemat(CAS("1/0"),m,1);
+    local lower_bound:=makemat(-CAS("1/0"),m,1);
+    local lower:=-CAS("1/0");
+    local upper:=CAS(" 1/0");
+    local c:=c_B;
+    local x:=X_B;
+    local str;
+    local index;
+    local maxes;
+    local mins;
+    local max_min:=makemat(0,m,3);
+
+    for j from 1 to rowDim(c_N) do
+      c:=addRow(c,row(c_N,j),rowDim(c)+1);
+    end;
+   
+    for j from 1 to size(X_N) do
+      x(0):=X_N(j);
+    end;
+
+    for j from 1 to m do
+      ρ(j):=col(I,j)*inv_B*N;
+    end;
+   
+    for j from 1 to m do
+        for k from 1 to n do
+         if NOT(ρ(j,k)==0) then
+            θ(j,k):=-(d(k,1)/ρ(j,k));
+         else
+            θ(j,k):=-CAS("1/0");
+         end;
+        end;
+    end;
+
+    for j from 1 to m do
+        maxes:={};
+        mins:={};
+        for k from 1 to n do
+            case
+                if ρ(j,k)<0 then mins(0):=θ(j,k); end;
+                if ρ(j,k)>0 then maxes(0):=θ(j,k); end;
+            end;
+        end;
+        max_min(j,1):=max(maxes);
+        max_min(j,2):=c(j,1);
+        max_min(j,3):=min(mins);
+    end;
+    
+    for j from 1 to m do
+        str:="Since " +x(j)+ " is basic at the solution, we compute e_" +basis_list(j)+ "™BN=" +round(ρ(j),2)+ ", ";
+        term(str);
+        str:="so ";
+        for k from 1 to n do
+        	str:=str + "ρ_" +basis_list(j)+ "_" +right(X_N(k),1)+ "=" +round(ρ(j,k),2)+ ", ";
+        end;
+        str:=str + "and the ratios θ_" +basis_list(j)+ "_k=-d_k/ρ_" +basis_list(j)+ "_k are ";
+        for k from 1 to n do
+        	str:=str +round(θ(j,k),2)+ "/" +round(ρ(j,k),2)+ "=" +round(θ(j,k)/ρ(j,k),2) + ", ";
+        end;
+        //division by zero in the above to fix.
+        term(str);
+        term("");
+    end;
+end;
+
+changes_in_b(x,B,m,n,x_N,x_B,old_x_B,basis_list,X_N,X_B)
+begin
+
+    local i,j,v,str:="";
+    local I:=identity(rowDim(B));
+    local slack_variable_list:={};
+    local slack_variable_value;
+    local index,X_N_index;
+    local θ,mins,maxes,smallest,largest;
+    local count:=0;
+    for i from 1 to m do
+        slack_variable_list(0):=n+i;
+    end;
+    X_N_index:={};
+    print("m=" +m);
+    for i from 1 to size(X_N) do
+        X_N_index(0):=expr(right(X_N(i),1))-m;
+    end;
+    print(X_N_index);
+    term("Changes in b:");
+    
+    for i from 1 to size(slack_variable_list) do
+        if member(slack_variable_list(i),basis_list) then
+            case
+                if old_x_B(i,1)<0 then
+                    term("x_" +basis_list(i)+ "=" +round(old_x_B(i,1),2)+ " has slack in it. A change of δb_" +basis_list(i)+ "=" +x_B(i,1)+ " will not change the solution provided");
+                    term("-∞ > b_" 
+                            +i+
+                             " + δb_" 
+                            +x_B(i,1)+ 
+                             " ≤ " 
+                            +round(x_B(i,1)-old_x_B(i,1),2)+ 
+                              "."
+                        );
+                end;
+                if old_x_B(i,1)>0 then
+                    term("x_" +basis_list(i)+ "=" +round(old_x_B(i,1),2)+ " has surplus in it. A change of δb_" +basis_list(i)+ "=" +x_B(i,1)+ " will not change the solution provided");
+                    term(round(x_B(i,1)-old_x_B(i,1),2)+ "=" +x_B(i,1)+ 
+                              "-" 
+                             +round(old_x_B(i,1),2)+
+                              "≤ " 
+                              +x_B(i,1)+ 
+                               " + δb_" 
+                              +i+ 
+                               " < ∞."
+                        );
+                    term("Thus δb_" +i+ ">" +round(old_x_B(i,1),2)+ " for a change in the solution.");
+                    term("");
+                end;
+                default term("This shouldn't be printed.");
+            end;
+        else
+            v:=inv(B)*TRN(col(I,i));
+            str:="[";
+            for j from 1 to rowDim(v)-1 do
+                str:=str +round(v(j,1),4) + ", ";
+            end;
+            index:=(slack_variable_list(i)-n);
+            str:=str +round(v(rowDim(v),1),4) + "]™.";
+            term("Since constraint " +index+ " has no slack in it we calculate");
+            term("v_" +index+ "=Be_" +i+ "=" +str);
+            str:="so the ratios θ_" +index+"_j=-old_x_B_j/(v" +index+ ")_j, are";
+            
+            maxes:={};
+            mins:={};
+            for j from 1 to rowDim(v)-1 do
+                if NOT(v(j,1)==0) then
+                    θ:=-old_x_B(j,1)/v(j,1);
+                else
+                    θ:=-CAS("1/0");
+                end;
+                str:=str+round(θ,6)+ ",";
+                case
+                    if v(j,1)>0 then maxes(0):=θ; end;
+                    if v(j,1)<0 then mins(0) :=θ; end;
+                end;
+            end;
+            θ:=-old_x_B(rowDim(v),1)/v(j,1);
+            case
+                if v(j,1)>0 then maxes(0):=θ; end;
+                if v(j,1)<0 then mins(0) :=θ; end;
+            end;
+            
+            str:=str +round(θ,6)+ ".";
+            term(str);
+            str:="Hence θ_" +index+ "_max=max" +string(round(maxes,6))+ "=" +round(max(maxes),6)+ " and ";
+            term(str);
+            str:="θ_" +index+ "_min=min" +string(round(mins,6))+ "=" +round(min(mins),6)+ ".";
+            term(str);
+            str:="∴ we deduce that the range of values for which the basis list remains optimal is";
+            term(str);
+            count:=count+1;
+            str:=x_N(X_N_index(count),1)+max(maxes);
+            str:=string(str) + " = " +x_N(X_N_index(count),1)+ " - " +abs(round(max(maxes),6))+ " ≤ b_" +index+ " + δb_" +index+ " ≤ " +x_N(X_N_index(count),1)+ " + " +round(min(mins),6)+ " = ";
+            str:=str + string(x_N(X_N_index(count),1)+min(mins));
+            term(str);
+            term("");
+        end;
+        
+    end
+end;
+
+term(str)
+begin
+    if (DEPTH mod LINES)==0 and str=="" then return; end;
+    
+    while size(str)>WIDTH do
+        print(left(str,WIDTH)+"☞");
+        str:=mid(str,WIDTH+1);
+        DEPTH:=DEPTH + 1;
+        if (DEPTH mod LINES)==0 then
+            wait;
+            print();
+        end;
+    end;
+    print(str);
+    DEPTH:=DEPTH + 1;
+    if (DEPTH mod LINES)==0 then
+        wait;
+        print();
+    end;
+end;
+
