@@ -174,7 +174,7 @@ begin
       until NOT(enters) or iteration==10;
 
       changes_in_c(N,B,m,n,dT,c_N,c_B, basis_list,X_N,X_B);
-      changes_in_b(x,B,m,n,x_N,x_B,old_x_B,basis_list,X_N,X_B);
+      changes_in_b(b,x,B,m,n,x_N,x_B,old_x_B,basis_list,X_N,X_B);
       editlist(L0);
     end; 
 end;
@@ -572,6 +572,7 @@ begin
     local max_min_lists;
     local max_min_list;
 
+	
     for j from 1 to rowDim(c_N) do
       c:=addRow(c,row(c_N,j),rowDim(c)+1);
     end;
@@ -579,6 +580,7 @@ begin
     for j from 1 to size(X_N) do
       x(0):=X_N(j);
     end;
+
 
     for j from 1 to m do
       ρ(j):=col(I,j)*inv_B*N;
@@ -594,25 +596,30 @@ begin
         end;
     end;
     
-     max_min_lists:={};
+    max_min_lists:={};
+
 
     for j from 1 to m do
-        maxes:={};
-        mins:={};
+        maxes:={-CAS("1/0")};
+        mins :={CAS("1/0")};
         for k from 1 to n do
             case
-                if ρ(j,k)<0 then mins(0):=θ(j,k); end;
+                if ρ(j,k)<0 then mins(0) :=θ(j,k); end;
                 if ρ(j,k)>0 then maxes(0):=θ(j,k); end;
             end;
         end;
+
+
         max_min(j,1):=max(maxes);
-        max_min(j,4):=c(j,1);
+        max_min(j,2):=c(j,1);
         max_min(j,3):=min(mins);
         max_min_lists(0):=round({maxes,mins},4);
+
     end;
     
+
     for j from 1 to m do
-        str:="Since " +x(j)+ " is basic at the solution, we compute e_" +basis_list(j)+ "™BN=" +round(ρ(j),4)+ ", ";
+        str:="Since " +x(j)+ " is basic at the solution, we compute e_" +j+ "™BN=" +round(ρ(j),4)+ ", ";
         term(str);
         str:="so ";
         for k from 1 to n do
@@ -639,13 +646,13 @@ begin
        	term(str);
        	term("basis list remains unchanged is");
        	term(str);
-       	str:=round(max_min(j,4)+max_min(j,1),4)+ "=" +round(max_min(j,4),4)+ " " +round(max_min(j,1),4)+ " ≤ c_" +basis_list(j)+ "+δc_" +basis_list(j)+ "≤" +round(max_min(j,4),4)+ "+" +round(max_min(j,3),4)+ " = " + round(max_min(j,4) + max_min(j,3),4)+ ".";
+       	str:=round(max_min(j,2)+max_min(j,1),4)+ "=" +round(max_min(j,2),4)+ " " +round(max_min(j,1),4)+ " ≤ c_" +basis_list(j)+ "+δc_" +basis_list(j)+ "≤" +round(max_min(j,2),4)+ "+" +round(max_min(j,3),4)+ " = " + round(max_min(j,2) + max_min(j,3),4)+ ".";
        	term(str);
         term("");
     end;
 end;
 
-changes_in_b(x,B,m,n,x_N,x_B,old_x_B,basis_list,X_N,X_B)
+changes_in_b(b,x,B,m,n,x_N,x_B,old_x_B,basis_list,X_N,X_B)
 begin
 
     local i,j,v,str:="";
@@ -655,11 +662,13 @@ begin
     local index,X_N_index;
     local θ,mins,maxes,smallest,largest;
     local count:=0;
+    local actual;
+    
     for i from 1 to m do
         slack_variable_list(0):=n+i;
     end;
-    X_N_index:={};
 
+    X_N_index:={};
     for i from 1 to size(X_N) do
         X_N_index(0):=expr(right(X_N(i),1))-m;
     end;
@@ -706,8 +715,9 @@ begin
             str:=str +round(v(rowDim(v),1),4) + "]™.";
             term("Since constraint " +index+ " has no slack in it we calculate");
             term("v_" +index+ "=Be_" +i+ "=" +str);
-            str:="so the ratios θ_" +index+"_j=-old_x_B_j/(v" +index+ ")_j, are";
-            
+            str:="so the ratios θ_" +index+"_j=-old_x_B_j/(v" +index+ ")_j, ";
+            term(str);
+            str:="are ";
             maxes:={};
             mins:={};
             for j from 1 to rowDim(v)-1 do
@@ -730,6 +740,7 @@ begin
             
             str:=str +round(θ,6)+ ".";
             term(str);
+            
             str:="Hence θ_" +index+ "_max=max" +string(round(maxes,6))+ "=" +round(max(maxes),6)+ " and ";
             term(str);
             str:="θ_" +index+ "_min=min" +string(round(mins,6))+ "=" +round(min(mins),6)+ ".";
@@ -737,9 +748,14 @@ begin
             str:="∴ we deduce that the range of values for which the basis list remains optimal is";
             term(str);
             count:=count+1;
-            str:=x_N(X_N_index(count),1)+max(maxes);
-            str:=string(str) + " = " +x_N(X_N_index(count),1)+ " - " +abs(round(max(maxes),6))+ " ≤ b_" +index+ " + δb_" +index+ " ≤ " +x_N(X_N_index(count),1)+ " + " +round(min(mins),6)+ " = ";
-            str:=str + string(x_N(X_N_index(count),1)+min(mins));
+            
+            actual:=b(index,1);
+			msgbox("actual="+actual);
+			msgbox("min(mins)="+min(mins));
+			msgbox("max(maxes)="+max(maxes));
+            str:=round(actual+max(maxes),6);
+            str:=str + " = " +round(actual,6)+ " - " +abs(round(max(maxes),6))+ " ≤ b_" +index+ " + δb_" +index+ " ≤ " +actual+ " + " +round(min(mins),6)+ " = ";
+            str:=str + round(actual+min(mins),6);
             term(str);
             term("");
         end;
